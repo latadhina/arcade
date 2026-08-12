@@ -4,7 +4,7 @@
   var W = canvas.width;
   var H = canvas.height;
 
-  var READY = 0, PLAY = 1, OVER = 2, BETWEEN = 3;
+  var READY = 0, PLAY = 1, OVER = 2;
   var state = READY;
   var score = 0, wave = 1, best = 0, lives = 3;
   try { best = Number(localStorage.getItem("lata_invaders_best") || 0); } catch (e) {}
@@ -17,9 +17,11 @@
   var stepTimer = 0;
   var stepEvery = 28;
   var shootCool = 0;
-  var betweenTimer = 0;
+  var invuln = 0;
   var keys = { left: false, right: false, shoot: false };
   var pointerAim = null;
+  var fx = [];
+  var banner = null;
 
   function waveConfig(w) {
     return {
@@ -29,6 +31,78 @@
       shotChance: Math.min(0.035, 0.008 + w * 0.004),
       drop: 14 + Math.min(8, w)
     };
+  }
+
+  function celebrate(label) {
+    banner = { text: label, t: 0, max: 0.85, x: W / 2, y: 36 };
+    var colors = ["#f0c040", "#ff6b4a", "#c8f135", "#5ad0e6", "#fff", "#f080a0"];
+    var i;
+    for (i = 0; i < 28; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = 40 + Math.random() * 120;
+      fx.push({
+        x: W / 2, y: 40,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
+        life: 0.55 + Math.random() * 0.35, max: 0.9,
+        color: colors[(Math.random() * colors.length) | 0],
+        size: 2 + Math.random() * 3
+      });
+    }
+    for (i = 0; i < 12; i++) {
+      var a2 = (i / 12) * Math.PI * 2;
+      fx.push({
+        x: W / 2, y: 40,
+        vx: Math.cos(a2) * 90, vy: Math.sin(a2) * 90,
+        life: 0.4, max: 0.4, color: "#fff", size: 2
+      });
+    }
+  }
+
+  function updateFx(dt) {
+    if (banner) {
+      banner.t += dt;
+      if (banner.t >= banner.max) banner = null;
+    }
+    for (var i = fx.length - 1; i >= 0; i--) {
+      var p = fx[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 180 * dt;
+      if (p.life <= 0) fx.splice(i, 1);
+    }
+  }
+
+  function drawFx() {
+    var i;
+    for (i = 0; i < fx.length; i++) {
+      var p = fx[i];
+      var a = Math.max(0, p.life / (p.max || 0.6));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (banner) {
+      var k = banner.t / banner.max;
+      var scale = 1 + k * 1.8;
+      var alpha = k < 0.25 ? k / 0.25 : Math.max(0, 1 - (k - 0.25) / 0.75);
+      ctx.save();
+      ctx.translate(banner.x, banner.y);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.font = "bold 16px sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeText(banner.text, 0, 0);
+      ctx.fillText(banner.text, 0, 0);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
   }
 
   function spawnWave() {
@@ -62,6 +136,9 @@
     wave = 1;
     lives = 3;
     ship.x = W / 2;
+    invuln = 0;
+    fx = [];
+    banner = null;
     spawnWave();
     state = PLAY;
   }
@@ -77,8 +154,10 @@
 
   function nextWave() {
     wave++;
-    betweenTimer = 1.6;
-    state = BETWEEN;
+    score += 100 * (wave - 1);
+    spawnWave();
+    invuln = 90;
+    celebrate("WAVE " + wave);
   }
 
   function fire() {
@@ -88,16 +167,9 @@
   }
 
   function update() {
-    if (state === BETWEEN) {
-      betweenTimer -= 1 / 60;
-      if (betweenTimer <= 0) {
-        ship.x = W / 2;
-        spawnWave();
-        state = PLAY;
-      }
-      return;
-    }
+    updateFx(1 / 60);
     if (state !== PLAY) return;
+    if (invuln > 0) invuln -= 1;
 
     if (pointerAim != null) ship.x += (pointerAim - ship.x) * 0.3;
     else {
@@ -135,7 +207,6 @@
       } else {
         for (e = 0; e < enemies.length; e++) if (enemies[e].alive) enemies[e].x += dir * (10 + wave);
       }
-      // enemy fire
       var shooters = [];
       for (e = 0; e < enemies.length; e++) if (enemies[e].alive) shooters.push(enemies[e]);
       if (shooters.length && Math.random() < cfg.shotChance * shooters.length) {
@@ -163,10 +234,12 @@
 
     for (i = enemyShots.length - 1; i >= 0; i--) {
       b = enemyShots[i];
+      if (invuln > 0) continue;
       if (Math.abs(b.x - ship.x) < ship.w * 0.45 && b.y > ship.y - ship.h && b.y < ship.y + 4) {
         enemyShots.splice(i, 1);
         lives -= 1;
         if (lives <= 0) { end(); return; }
+        invuln = 60;
       }
     }
 
@@ -176,10 +249,7 @@
       alive++;
       if (enemies[e].y + enemies[e].h >= ship.y - 4) { end(); return; }
     }
-    if (alive === 0) {
-      score += 100 * wave;
-      nextWave();
-    }
+    if (alive === 0) nextWave();
   }
 
   function drawAlien(en) {
@@ -197,24 +267,33 @@
     ctx.fillStyle = "rgba(255,255,255,0.35)";
     for (var s = 0; s < 40; s++) ctx.fillRect((s * 97) % W, (s * 53) % H, 2, 2);
 
+    if (state === PLAY || state === OVER) {
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(8, 8, 58, 18);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("wave " + wave, 14, 21);
+    }
+
     ctx.fillStyle = "#cfd3da";
     ctx.font = "600 13px monospace";
     ctx.textAlign = "left";
-    ctx.fillText("SCORE " + score, 14, 24);
-    ctx.textAlign = "center";
-    ctx.fillText("WAVE " + wave, W / 2, 24);
+    ctx.fillText("SCORE " + score, 14, 42);
     ctx.textAlign = "right";
-    ctx.fillText("LIVES " + lives + "  BEST " + best, W - 14, 24);
+    ctx.fillText("LIVES " + lives + "  BEST " + best, W - 14, 42);
 
     for (var i = 0; i < enemies.length; i++) if (enemies[i].alive) drawAlien(enemies[i]);
 
-    ctx.fillStyle = "#5ad0e6";
-    ctx.beginPath();
-    ctx.moveTo(ship.x, ship.y - ship.h);
-    ctx.lineTo(ship.x - ship.w / 2, ship.y);
-    ctx.lineTo(ship.x + ship.w / 2, ship.y);
-    ctx.closePath();
-    ctx.fill();
+    if (invuln <= 0 || (invuln % 6 < 3)) {
+      ctx.fillStyle = "#5ad0e6";
+      ctx.beginPath();
+      ctx.moveTo(ship.x, ship.y - ship.h);
+      ctx.lineTo(ship.x - ship.w / 2, ship.y);
+      ctx.lineTo(ship.x + ship.w / 2, ship.y);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     ctx.fillStyle = "#f3efe4";
     for (i = 0; i < bullets.length; i++) ctx.fillRect(bullets[i].x - 2, bullets[i].y - 8, 4, 10);
@@ -231,15 +310,6 @@
       ctx.fillStyle = "#f3efe4";
       ctx.font = "14px sans-serif";
       ctx.fillText("Clear waves · dodge enemy fire", W / 2, H * 0.40 + 74);
-    } else if (state === BETWEEN) {
-      ctx.fillStyle = "rgba(5,8,16,0.75)";
-      ctx.fillRect(36, H * 0.38, W - 72, 100);
-      ctx.fillStyle = "#c8f135";
-      ctx.font = "700 26px sans-serif";
-      ctx.fillText("WAVE " + wave, W / 2, H * 0.38 + 48);
-      ctx.fillStyle = "#f3efe4";
-      ctx.font = "14px sans-serif";
-      ctx.fillText("Harder formation inbound", W / 2, H * 0.38 + 78);
     } else if (state === OVER) {
       ctx.fillStyle = "rgba(5,8,16,0.84)";
       ctx.fillRect(36, H * 0.38, W - 72, 120);
@@ -252,6 +322,8 @@
       ctx.font = "13px sans-serif";
       ctx.fillText("Tap to retry", W / 2, H * 0.38 + 100);
     }
+
+    drawFx();
   }
 
   function loop() {

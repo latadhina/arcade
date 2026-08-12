@@ -4,7 +4,7 @@
   var W = canvas.width;
   var H = canvas.height;
 
-  var READY = 0, PLAY = 1, OVER = 2, BETWEEN = 3;
+  var READY = 0, PLAY = 1, OVER = 2;
   var state = READY;
   var score = 0, level = 1, best = 0, lives = 3;
   try { best = Number(localStorage.getItem("lata_breakout_best") || 0); } catch (e) {}
@@ -15,8 +15,81 @@
   var paddle = { w: 72, h: 12, x: W / 2 - 36, y: H - 48 };
   var ball = { x: W / 2, y: H - 70, vx: 0, vy: 0, r: 7 };
   var pointerX = paddle.x;
-  var betweenTimer = 0;
   var ballSpeed = 5.2;
+  var fx = [];
+  var banner = null;
+
+  function celebrate(label) {
+    banner = { text: label, t: 0, max: 0.85, x: W / 2, y: 36 };
+    var colors = ["#f0c040", "#ff6b4a", "#c8f135", "#5ad0e6", "#fff", "#f080a0"];
+    var i;
+    for (i = 0; i < 28; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = 40 + Math.random() * 120;
+      fx.push({
+        x: W / 2, y: 40,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
+        life: 0.55 + Math.random() * 0.35, max: 0.9,
+        color: colors[(Math.random() * colors.length) | 0],
+        size: 2 + Math.random() * 3
+      });
+    }
+    for (i = 0; i < 12; i++) {
+      var a2 = (i / 12) * Math.PI * 2;
+      fx.push({
+        x: W / 2, y: 40,
+        vx: Math.cos(a2) * 90, vy: Math.sin(a2) * 90,
+        life: 0.4, max: 0.4, color: "#fff", size: 2
+      });
+    }
+  }
+
+  function updateFx(dt) {
+    if (banner) {
+      banner.t += dt;
+      if (banner.t >= banner.max) banner = null;
+    }
+    for (var i = fx.length - 1; i >= 0; i--) {
+      var p = fx[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 180 * dt;
+      if (p.life <= 0) fx.splice(i, 1);
+    }
+  }
+
+  function drawFx() {
+    var i;
+    for (i = 0; i < fx.length; i++) {
+      var p = fx[i];
+      var a = Math.max(0, p.life / (p.max || 0.6));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (banner) {
+      var k = banner.t / banner.max;
+      var scale = 1 + k * 1.8;
+      var alpha = k < 0.25 ? k / 0.25 : Math.max(0, 1 - (k - 0.25) / 0.75);
+      ctx.save();
+      ctx.translate(banner.x, banner.y);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.font = "bold 16px sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeText(banner.text, 0, 0);
+      ctx.fillText(banner.text, 0, 0);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+  }
 
   function layout() {
     var rows = Math.min(8, 4 + level);
@@ -27,7 +100,6 @@
     bricks = [];
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
-        // later levels: skip some for patterns / denser top
         if (level >= 3 && (r + c) % (level >= 5 ? 5 : 7) === 0 && r > 0) continue;
         bricks.push({
           x: offsetX + c * (brickW + gap),
@@ -61,6 +133,8 @@
     score = 0;
     level = 1;
     lives = 3;
+    fx = [];
+    banner = null;
     layout();
     paddle.x = W / 2 - paddle.w / 2;
     resetBallOnPaddle();
@@ -80,22 +154,15 @@
   function nextLevel() {
     level++;
     score += 200 * (level - 1);
-    betweenTimer = 1.4;
-    state = BETWEEN;
+    layout();
+    paddle.x = Math.max(8, Math.min(W - paddle.w - 8, paddle.x));
+    resetBallOnPaddle();
+    launch();
+    celebrate("LEVEL " + level);
   }
 
   function update() {
-    if (state === BETWEEN) {
-      betweenTimer -= 1 / 60;
-      if (betweenTimer <= 0) {
-        layout();
-        paddle.x = W / 2 - paddle.w / 2;
-        resetBallOnPaddle();
-        launch();
-        state = PLAY;
-      }
-      return;
-    }
+    updateFx(1 / 60);
     if (state !== PLAY) return;
 
     paddle.x += (pointerX - paddle.x) * 0.4;
@@ -177,14 +244,21 @@
     ctx.fillStyle = "#0b1424";
     ctx.fillRect(0, 0, W, H);
 
+    if (state === PLAY || state === OVER) {
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(8, 8, 62, 18);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("level " + level, 14, 21);
+    }
+
     ctx.fillStyle = "#cfd3da";
     ctx.font = "600 13px monospace";
     ctx.textAlign = "left";
-    ctx.fillText("SCORE " + score, 14, 24);
-    ctx.textAlign = "center";
-    ctx.fillText("LEVEL " + level, W / 2, 24);
+    ctx.fillText("SCORE " + score, 14, 42);
     ctx.textAlign = "right";
-    ctx.fillText("LIVES " + lives + "  BEST " + best, W - 14, 24);
+    ctx.fillText("LIVES " + lives + "  BEST " + best, W - 14, 42);
 
     for (var i = 0; i < bricks.length; i++) {
       var b = bricks[i];
@@ -216,15 +290,6 @@
       ctx.fillText("BREAKOUT", W / 2, H * 0.42 + 42);
       ctx.font = "14px sans-serif";
       ctx.fillText("Clear levels · multi-hit bricks later", W / 2, H * 0.42 + 72);
-    } else if (state === BETWEEN) {
-      ctx.fillStyle = "rgba(11,20,36,0.8)";
-      ctx.fillRect(40, H * 0.40, W - 80, 100);
-      ctx.fillStyle = "#c8f135";
-      ctx.font = "700 26px sans-serif";
-      ctx.fillText("LEVEL " + level, W / 2, H * 0.40 + 48);
-      ctx.fillStyle = "#f3efe4";
-      ctx.font = "14px sans-serif";
-      ctx.fillText("Faster ball · tougher layout", W / 2, H * 0.40 + 78);
     } else if (state === OVER) {
       ctx.fillStyle = "rgba(11,20,36,0.82)";
       ctx.fillRect(40, H * 0.40, W - 80, 120);
@@ -237,6 +302,8 @@
       ctx.font = "13px sans-serif";
       ctx.fillText("Tap to retry", W / 2, H * 0.40 + 100);
     }
+
+    drawFx();
   }
 
   function loop() {

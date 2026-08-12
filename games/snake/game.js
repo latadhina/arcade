@@ -21,7 +21,7 @@
   canvas.height = H;
   var ctx = canvas.getContext("2d", { alpha: false });
 
-  var READY = 0, PLAY = 1, DEAD = 2, BETWEEN = 3;
+  var READY = 0, PLAY = 1, DEAD = 2;
   var state = READY;
   var snake = [];
   var dir = { x: 1, y: 0 };
@@ -38,8 +38,81 @@
   var last = 0;
   var touchStart = null;
   var pulse = 0;
-  var betweenTimer = 0;
-  var hazards = []; // blocked cells in later rounds
+  var hazards = [];
+  var fx = [];
+  var banner = null;
+
+  function celebrate(label) {
+    banner = { text: label, t: 0, max: 0.85, x: W / 2, y: 56 };
+    var colors = ["#f0c040", "#ff6b4a", "#c8f135", "#5ad0e6", "#fff", "#f080a0"];
+    var i;
+    for (i = 0; i < 28; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = 40 + Math.random() * 120;
+      fx.push({
+        x: W / 2, y: 58,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
+        life: 0.55 + Math.random() * 0.35, max: 0.9,
+        color: colors[(Math.random() * colors.length) | 0],
+        size: 2 + Math.random() * 3
+      });
+    }
+    for (i = 0; i < 12; i++) {
+      var a2 = (i / 12) * Math.PI * 2;
+      fx.push({
+        x: W / 2, y: 58,
+        vx: Math.cos(a2) * 90, vy: Math.sin(a2) * 90,
+        life: 0.4, max: 0.4, color: "#fff", size: 2
+      });
+    }
+  }
+
+  function updateFx(dt) {
+    if (banner) {
+      banner.t += dt;
+      if (banner.t >= banner.max) banner = null;
+    }
+    for (var i = fx.length - 1; i >= 0; i--) {
+      var p = fx[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 180 * dt;
+      if (p.life <= 0) fx.splice(i, 1);
+    }
+  }
+
+  function drawFx() {
+    var i;
+    for (i = 0; i < fx.length; i++) {
+      var p = fx[i];
+      var a = Math.max(0, p.life / (p.max || 0.6));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (banner) {
+      var k = banner.t / banner.max;
+      var scale = 1 + k * 1.8;
+      var alpha = k < 0.25 ? k / 0.25 : Math.max(0, 1 - (k - 0.25) / 0.75);
+      ctx.save();
+      ctx.translate(banner.x, banner.y);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.font = "bold 16px sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeText(banner.text, 0, 0);
+      ctx.fillText(banner.text, 0, 0);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+  }
 
   function reset() {
     state = READY;
@@ -58,6 +131,8 @@
     hazards = [];
     tick = 0;
     stepTime = 0.24;
+    fx = [];
+    banner = null;
     placeFood();
   }
 
@@ -126,8 +201,7 @@
     stepTime = Math.max(0.10, 0.24 - (round - 1) * 0.018);
     buildHazards();
     placeFood();
-    betweenTimer = 1.3;
-    state = BETWEEN;
+    celebrate("ROUND " + round);
   }
 
   function step() {
@@ -295,12 +369,10 @@
     var p = cellCenter(food);
     var s = 0.9 + Math.sin(pulse * 3) * 0.06;
     var rad = CELL * 0.34 * s;
-    // Single target only (no mini bubble / leaf)
     ctx.fillStyle = LCD;
     ctx.beginPath();
     ctx.arc(p.x, p.y, rad, 0, Math.PI * 2);
     ctx.fill();
-    // tiny highlight so it reads as food, not a second orb
     ctx.fillStyle = "rgba(197,214,160,0.45)";
     ctx.beginPath();
     ctx.arc(p.x - 2, p.y - 2, rad * 0.28, 0, Math.PI * 2);
@@ -348,23 +420,29 @@
       }
     }
 
+    if (state === PLAY || state === DEAD) {
+      ctx.fillStyle = "rgba(26,38,18,0.2)";
+      ctx.fillRect(38, 48, 62, 16);
+      ctx.fillStyle = LCD;
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("round " + round, 44, 60);
+    }
+
     ctx.fillStyle = LCD;
     ctx.font = "600 13px monospace";
     ctx.textAlign = "left";
-    ctx.fillText("SCORE  " + score, 42, 68);
-    ctx.textAlign = "center";
-    ctx.fillText("ROUND " + round, W / 2, 68);
+    ctx.fillText("SCORE  " + score, 110, 60);
     ctx.textAlign = "right";
-    ctx.fillText("BEST  " + best, W - 42, 68);
+    ctx.fillText("BEST  " + best, W - 42, 60);
 
     ctx.strokeStyle = "rgba(26,38,18,0.25)";
     ctx.beginPath();
-    ctx.moveTo(42, 78);
-    ctx.lineTo(W - 42, 78);
+    ctx.moveTo(42, 72);
+    ctx.lineTo(W - 42, 72);
     ctx.stroke();
 
     drawFood();
-    // hazards
     for (var hi = 0; hi < hazards.length; hi++) {
       var hp = cellCenter(hazards[hi]);
       ctx.fillStyle = LCD;
@@ -382,15 +460,6 @@
       ctx.fillText("SNAKE", W / 2, lcdY + lcdH * 0.32 + 48);
       ctx.font = "14px sans-serif";
       ctx.fillText("5 foods · next round gets hazards", W / 2, lcdY + lcdH * 0.32 + 78);
-    } else if (state === BETWEEN) {
-      ctx.fillStyle = "rgba(197,214,160,0.8)";
-      roundRect(lcdX + 20, lcdY + lcdH * 0.32, lcdW - 40, 110, 10);
-      ctx.fill();
-      ctx.fillStyle = LCD;
-      ctx.font = "700 28px sans-serif";
-      ctx.fillText("ROUND " + round, W / 2, lcdY + lcdH * 0.32 + 48);
-      ctx.font = "14px sans-serif";
-      ctx.fillText("Faster · more obstacles", W / 2, lcdY + lcdH * 0.32 + 78);
     } else if (state === DEAD) {
       ctx.fillStyle = "rgba(197,214,160,0.8)";
       roundRect(lcdX + 20, lcdY + lcdH * 0.30, lcdW - 40, 120, 10);
@@ -417,6 +486,8 @@
     ctx.strokeStyle = ACCENT;
     ctx.lineWidth = 2;
     ctx.stroke();
+
+    drawFx();
   }
 
   function loop(now) {
@@ -424,10 +495,8 @@
     var dt = (now - last) / 1000;
     if (dt > 0.05) dt = 0.05;
     last = now;
-    if (state === BETWEEN) {
-      betweenTimer -= dt;
-      if (betweenTimer <= 0) state = PLAY;
-    } else if (state === PLAY) {
+    updateFx(dt);
+    if (state === PLAY) {
       tick += dt;
       while (tick >= stepTime) {
         tick -= stepTime;

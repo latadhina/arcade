@@ -4,12 +4,12 @@
   var W = canvas.width;
   var H = canvas.height;
 
-  var READY = 0, PLAY = 1, OVER = 2, BETWEEN = 3;
+  var READY = 0, PLAY = 1, OVER = 2;
   var state = READY;
   var scoreP = 0, scoreC = 0;
   var round = 1;
   var winsP = 0, winsC = 0;
-  var POINTS = 5; // points to win a round
+  var POINTS = 5;
   var ROUNDS_TO_WIN = 3;
 
   var paddleH = 56;
@@ -19,9 +19,82 @@
   var ball = { x: W / 2, y: H / 2, vx: 0, vy: 0, r: 6 };
   var pointerY = playerY;
   var serveToPlayer = true;
-  var betweenTimer = 0;
   var ballSpeed = 4.2;
   var cpuSkill = 0.08;
+  var fx = [];
+  var banner = null;
+
+  function celebrate(label) {
+    banner = { text: label, t: 0, max: 0.85, x: W / 2, y: 36 };
+    var colors = ["#f0c040", "#ff6b4a", "#c8f135", "#5ad0e6", "#fff", "#f080a0"];
+    var i;
+    for (i = 0; i < 28; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = 40 + Math.random() * 120;
+      fx.push({
+        x: W / 2, y: 40,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 30,
+        life: 0.55 + Math.random() * 0.35, max: 0.9,
+        color: colors[(Math.random() * colors.length) | 0],
+        size: 2 + Math.random() * 3
+      });
+    }
+    for (i = 0; i < 12; i++) {
+      var a2 = (i / 12) * Math.PI * 2;
+      fx.push({
+        x: W / 2, y: 40,
+        vx: Math.cos(a2) * 90, vy: Math.sin(a2) * 90,
+        life: 0.4, max: 0.4, color: "#fff", size: 2
+      });
+    }
+  }
+
+  function updateFx(dt) {
+    if (banner) {
+      banner.t += dt;
+      if (banner.t >= banner.max) banner = null;
+    }
+    for (var i = fx.length - 1; i >= 0; i--) {
+      var p = fx[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 180 * dt;
+      if (p.life <= 0) fx.splice(i, 1);
+    }
+  }
+
+  function drawFx() {
+    var i;
+    for (i = 0; i < fx.length; i++) {
+      var p = fx[i];
+      var a = Math.max(0, p.life / (p.max || 0.6));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (banner) {
+      var k = banner.t / banner.max;
+      var scale = 1 + k * 1.8;
+      var alpha = k < 0.25 ? k / 0.25 : Math.max(0, 1 - (k - 0.25) / 0.75);
+      ctx.save();
+      ctx.translate(banner.x, banner.y);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.font = "bold 16px sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeText(banner.text, 0, 0);
+      ctx.fillText(banner.text, 0, 0);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+  }
 
   function applyRound() {
     ballSpeed = 4.0 + round * 0.45;
@@ -44,6 +117,8 @@
     }
     scoreP = 0;
     scoreC = 0;
+    fx = [];
+    banner = null;
     applyRound();
     state = PLAY;
     resetBall();
@@ -65,26 +140,18 @@
     scoreP = 0;
     scoreC = 0;
     applyRound();
-    betweenTimer = 1.5;
-    state = BETWEEN;
+    resetBall();
+    celebrate("ROUND " + round);
   }
 
   function update() {
-    if (state === BETWEEN) {
-      betweenTimer -= 1 / 60;
-      if (betweenTimer <= 0) {
-        resetBall();
-        state = PLAY;
-      }
-      return;
-    }
+    updateFx(1 / 60);
     if (state !== PLAY) return;
 
     playerY += (pointerY - playerY) * 0.35;
     playerY = Math.max(0, Math.min(H - paddleH, playerY));
 
     var target = ball.y - paddleH / 2;
-    // CPU error grows when ball is far / early rounds easier
     target += (Math.random() - 0.5) * (26 - round * 3);
     cpuY += (target - cpuY) * cpuSkill;
     cpuY = Math.max(0, Math.min(H - paddleH, cpuY));
@@ -157,13 +224,22 @@
       ctx.fill();
     }
 
+    if (state === PLAY || state === OVER) {
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(8, 8, 62, 18);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("round " + round, 14, 21);
+    }
+
     ctx.fillStyle = "#cfd3da";
     ctx.font = "600 28px monospace";
     ctx.textAlign = "center";
-    ctx.fillText(String(scoreP), W / 2 - 40, 36);
-    ctx.fillText(String(scoreC), W / 2 + 40, 36);
+    ctx.fillText(String(scoreP), W / 2 - 40, 48);
+    ctx.fillText(String(scoreC), W / 2 + 40, 48);
     ctx.font = "12px monospace";
-    ctx.fillText("ROUND " + round + "  ·  MATCH " + winsP + "-" + winsC, W / 2, 56);
+    ctx.fillText("MATCH " + winsP + "-" + winsC, W / 2, 68);
 
     if (state === READY) {
       ctx.fillStyle = "rgba(14,16,20,0.72)";
@@ -173,15 +249,6 @@
       ctx.fillText("PONG", W / 2, H / 2 - 8);
       ctx.font = "14px sans-serif";
       ctx.fillText("First to 5 · best of 5 rounds", W / 2, H / 2 + 22);
-    } else if (state === BETWEEN) {
-      ctx.fillStyle = "rgba(14,16,20,0.8)";
-      ctx.fillRect(W / 2 - 150, H / 2 - 50, 300, 100);
-      ctx.fillStyle = "#c8f135";
-      ctx.font = "700 24px sans-serif";
-      ctx.fillText("ROUND " + round, W / 2, H / 2 - 4);
-      ctx.fillStyle = "#f3efe4";
-      ctx.font = "14px sans-serif";
-      ctx.fillText("Faster ball · smarter CPU", W / 2, H / 2 + 26);
     } else if (state === OVER) {
       ctx.fillStyle = "rgba(14,16,20,0.8)";
       ctx.fillRect(W / 2 - 150, H / 2 - 54, 300, 110);
@@ -193,6 +260,8 @@
       ctx.fillText(winsP + " – " + winsC + " rounds", W / 2, H / 2 + 18);
       ctx.fillText("Tap to rematch", W / 2, H / 2 + 40);
     }
+
+    drawFx();
   }
 
   function loop() {
