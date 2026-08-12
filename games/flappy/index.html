@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Tappy Bird</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: #1a1a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: system-ui, sans-serif;
+      touch-action: none;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: min(480px, 100vw);
+      height: auto;
+      max-height: calc(100vh - 48px);
+      background: #4ec0ca;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .bar {
+      width: min(480px, 100vw);
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #ddd;
+      font-size: 14px;
+    }
+    .bar a { color: #9cf; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <a href="../../">← A LATA ARCADE</a>
+    <span>Space / tap to flap</span>
+  </div>
+  <canvas id="c" width="320" height="480"></canvas>
+  <script src="../../products.js?v=8"></script>
+  <script src="../../promo.js?v=8"></script>
+  <script src="game.js?v=4"></script>
+</body>
+</html>

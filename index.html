@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>A LATA ARCADE</title>
+  <meta name="description" content="Play free browser games from A LATA ARCADE." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=11" />
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+
+  <header class="hero">
+    <div class="hero-main">
+      <div class="hero-copy">
+        <p class="brand">A LATA</p>
+        <h1 class="title">ARCADE</h1>
+        <p class="tag">Free browser games. No installs. Just play.</p>
+      </div>
+
+      <section id="games" class="games" aria-label="Games">
+        <h2 class="section-label">Now playing</h2>
+        <ul class="grid">
+          <li>
+            <a class="game" href="games/flappy/">
+              <span class="game-art" aria-hidden="true">
+                <span class="bird"></span>
+                <span class="pipe pipe-top"></span>
+                <span class="pipe pipe-bot"></span>
+              </span>
+              <span class="game-meta">
+                <span class="game-name">Tappy Bird</span>
+                <span class="game-desc">Tap to flap. Dodge the pipes.</span>
+                <span class="game-go">Play →</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="game" href="games/snake/">
+              <span class="game-art snake-art" aria-hidden="true">
+                <span class="snake-seg s1"></span>
+                <span class="snake-seg s2"></span>
+                <span class="snake-seg s3"></span>
+                <span class="snake-seg s4"></span>
+                <span class="snake-food"></span>
+              </span>
+              <span class="game-meta">
+                <span class="game-name">Snake</span>
+                <span class="game-desc">Eat, grow, don’t hit yourself.</span>
+                <span class="game-go">Play →</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="game" href="games/tetris/">
+              <span class="game-art tetris-art" aria-hidden="true">
+                <span class="tb t1"></span>
+                <span class="tb t2"></span>
+                <span class="tb t3"></span>
+                <span class="tb t4"></span>
+                <span class="tb t5"></span>
+                <span class="tb t6"></span>
+              </span>
+              <span class="game-meta">
+                <span class="game-name">Tetris</span>
+                <span class="game-desc">Stack blocks. Clear lines.</span>
+                <span class="game-go">Play →</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="game" href="games/pong/">
+              <span class="game-art pong-art" aria-hidden="true">
+                <span class="pong-paddle left"></span>
+                <span class="pong-paddle right"></span>
+                <span class="pong-ball"></span>
+              </span>
+              <span class="game-meta">
+                <span class="game-name">Pong</span>
+                <span class="game-desc">Bounce the ball. Don’t miss.</span>
+                <span class="game-go">Play →</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="game" href="games/breakout/">
+              <span class="game-art breakout-art" aria-hidden="true">
+                <span class="brk b1"></span>
+                <span class="brk b2"></span>
+                <span class="brk b3"></span>
+                <span class="brk b4"></span>
+                <span class="brk b5"></span>
+                <span class="brk b6"></span>
+                <span class="break-paddle"></span>
+                <span class="break-ball"></span>
+              </span>
+              <span class="game-meta">
+                <span class="game-name">Breakout</span>
+                <span class="game-desc">Smash bricks. Keep the ball up.</span>
+                <span class="game-go">Play →</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="game" href="games/invaders/">
+              <span class="game-art invaders-art" aria-hidden="true">
+                <span class="inv i1"></span>
+                <span class="inv i2"></span>
+                <span class="inv i3"></span>
+                <span class="inv i4"></span>
+                <span class="inv i5"></span>
+                <span class="inv i6"></span>
+                <span class="ship"></span>
+              </span>
+              <span class="game-meta">
+                <span class="game-name">Space Invaders</span>
+                <span class="game-desc">Shoot the aliens before they land.</span>
+                <span class="game-go">Play →</span>
+              </span>
+            </a>
+          </li>
+          <li>
+            <a class="game" href="games/asteroids/">
+              <span class="game-art asteroids-art" aria-hidden="true">
+                <span class="rock r1"></span>
+                <span class="rock r2"></span>
+                <span class="rock r3"></span>
+                <span class="tri"></span>
+              </span>
+              <span class="game-meta">
+                <span class="game-name">Asteroids</span>
+                <span class="game-desc">Spin, thrust, blast the rocks.</span>
+                <span class="game-go">Play →</span>
+              </span>
+            </a>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- Product ad screen stays visible beside the games -->
+    <aside class="ad-screen" aria-label="Product showcase">
+      <div class="ad-bezel">
+        <div class="ad-topbar">
+          <span class="ad-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="ad-title">LATA Apps</span>
+        </div>
+        <div class="ad-viewport">
+          <div class="ad-slides" id="ad-slides">
+            <!-- filled by products.js -->
+          </div>
+        </div>
+        <div class="ad-footer">
+          <div class="ad-dots-nav" id="ad-dots" role="tablist" aria-label="Products"></div>
+          <a class="ad-cta" id="ad-cta" href="#" target="_blank" rel="noopener">Get on Microsoft Store</a>
+        </div>
+      </div>
+    </aside>
+  </header>
+
+  <footer class="foot">
+    <span>Made by A LATA ARCADE</span>
+    <a href="https://github.com/latadhina/arcade">Arcade on GitHub</a>
+  </footer>
+
+  <script src="products.js?v=11"></script>
+  <script src="slideshow.js?v=11"></script>
+</body>
+</html>
