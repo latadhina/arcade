@@ -4,10 +4,9 @@
   var W = canvas.width;
   var H = canvas.height;
 
-  var READY = 0, PLAY = 1, OVER = 2;
+  var READY = 0, PLAY = 1, OVER = 2, BETWEEN = 3;
   var state = READY;
-  var score = 0;
-  var best = 0;
+  var score = 0, wave = 1, best = 0, lives = 3;
   try { best = Number(localStorage.getItem("lata_asteroids_best") || 0); } catch (e) {}
 
   var ship = { x: W / 2, y: H / 2, a: -Math.PI / 2, vx: 0, vy: 0 };
@@ -15,6 +14,8 @@
   var rocks = [];
   var keys = { left: false, right: false, thrust: false, fire: false };
   var cool = 0;
+  var betweenTimer = 0;
+  var invuln = 0;
 
   function wrap(o, r) {
     if (o.x < -r) o.x = W + r;
@@ -44,32 +45,44 @@
 
   function spawnField() {
     rocks = [];
-    for (var i = 0; i < 5; i++) {
-      var ang = (i / 5) * Math.PI * 2;
+    var count = Math.min(10, 3 + wave);
+    var speedBase = 0.9 + wave * 0.18;
+    for (var i = 0; i < count; i++) {
+      var ang = (i / count) * Math.PI * 2 + Math.random() * 0.3;
       rocks.push(makeRock(
-        W / 2 + Math.cos(ang) * 170,
-        H / 2 + Math.sin(ang) * 170,
-        34,
-        1.1 + Math.random() * 0.8
+        W / 2 + Math.cos(ang) * (150 + Math.random() * 40),
+        H / 2 + Math.sin(ang) * (150 + Math.random() * 40),
+        28 + Math.min(12, wave),
+        speedBase + Math.random() * 0.9
       ));
     }
   }
 
   function start() {
     score = 0;
+    wave = 1;
+    lives = 3;
     bullets = [];
     ship = { x: W / 2, y: H / 2, a: -Math.PI / 2, vx: 0, vy: 0 };
+    invuln = 90;
     spawnField();
     state = PLAY;
   }
 
   function die() {
-    state = OVER;
-    if (score > best) {
-      best = score;
-      try { localStorage.setItem("lata_asteroids_best", String(best)); } catch (e) {}
+    if (invuln > 0) return;
+    lives -= 1;
+    if (lives <= 0) {
+      state = OVER;
+      if (score > best) {
+        best = score;
+        try { localStorage.setItem("lata_asteroids_best", String(best)); } catch (e) {}
+      }
+      if (window.LataPromo) window.LataPromo.onGameOver();
+      return;
     }
-    if (window.LataPromo) window.LataPromo.onGameOver();
+    ship = { x: W / 2, y: H / 2, a: -Math.PI / 2, vx: 0, vy: 0 };
+    invuln = 120;
   }
 
   function fire() {
@@ -81,30 +94,44 @@
       vy: Math.sin(ship.a) * 8 + ship.vy,
       life: 42
     });
-    cool = 10;
+    cool = Math.max(6, 11 - Math.floor(wave / 3));
   }
 
   function splitRock(rock, index) {
     rocks.splice(index, 1);
     if (rock.r > 18) {
-      rocks.push(makeRock(rock.x, rock.y, rock.r * 0.55, 1.6 + Math.random()));
-      rocks.push(makeRock(rock.x, rock.y, rock.r * 0.55, 1.6 + Math.random()));
+      rocks.push(makeRock(rock.x, rock.y, rock.r * 0.55, 1.6 + wave * 0.1 + Math.random()));
+      rocks.push(makeRock(rock.x, rock.y, rock.r * 0.55, 1.6 + wave * 0.1 + Math.random()));
       score += 20;
     } else if (rock.r > 10) {
-      rocks.push(makeRock(rock.x, rock.y, rock.r * 0.5, 2.2 + Math.random()));
-      rocks.push(makeRock(rock.x, rock.y, rock.r * 0.5, 2.2 + Math.random()));
+      rocks.push(makeRock(rock.x, rock.y, rock.r * 0.5, 2.2 + wave * 0.1 + Math.random()));
+      rocks.push(makeRock(rock.x, rock.y, rock.r * 0.5, 2.2 + wave * 0.1 + Math.random()));
       score += 40;
     } else {
       score += 80;
     }
     if (rocks.length === 0) {
-      spawnField();
-      score += 100;
+      score += 150 * wave;
+      wave++;
+      betweenTimer = 1.5;
+      state = BETWEEN;
     }
   }
 
   function update() {
+    if (state === BETWEEN) {
+      betweenTimer -= 1 / 60;
+      if (betweenTimer <= 0) {
+        ship = { x: W / 2, y: H / 2, a: -Math.PI / 2, vx: 0, vy: 0 };
+        bullets = [];
+        invuln = 90;
+        spawnField();
+        state = PLAY;
+      }
+      return;
+    }
     if (state !== PLAY) return;
+    if (invuln > 0) invuln -= 1;
 
     if (keys.left) ship.a -= 0.08;
     if (keys.right) ship.a += 0.08;
@@ -139,7 +166,7 @@
 
       var dx = ship.x - rock.x;
       var dy = ship.y - rock.y;
-      if (dx * dx + dy * dy < (rock.r + 8) * (rock.r + 8)) {
+      if (invuln <= 0 && dx * dx + dy * dy < (rock.r + 8) * (rock.r + 8)) {
         die();
         return;
       }
@@ -177,45 +204,45 @@
   function draw() {
     ctx.fillStyle = "#05070c";
     ctx.fillRect(0, 0, W, H);
-
     ctx.fillStyle = "rgba(255,255,255,0.28)";
-    for (var s = 0; s < 50; s++) {
-      ctx.fillRect((s * 73) % W, (s * 41) % H, 2, 2);
-    }
+    for (var s = 0; s < 50; s++) ctx.fillRect((s * 73) % W, (s * 41) % H, 2, 2);
 
     ctx.fillStyle = "#cfd3da";
-    ctx.font = "600 14px monospace";
+    ctx.font = "600 13px monospace";
     ctx.textAlign = "left";
-    ctx.fillText("SCORE  " + score, 16, 28);
+    ctx.fillText("SCORE " + score, 14, 24);
+    ctx.textAlign = "center";
+    ctx.fillText("WAVE " + wave, W / 2, 24);
     ctx.textAlign = "right";
-    ctx.fillText("BEST  " + best, W - 16, 28);
+    ctx.fillText("LIVES " + lives + "  BEST " + best, W - 14, 24);
 
     for (var i = 0; i < rocks.length; i++) drawRock(rocks[i]);
 
-    // ship
-    ctx.save();
-    ctx.translate(ship.x, ship.y);
-    ctx.rotate(ship.a);
-    ctx.beginPath();
-    ctx.moveTo(14, 0);
-    ctx.lineTo(-10, 9);
-    ctx.lineTo(-6, 0);
-    ctx.lineTo(-10, -9);
-    ctx.closePath();
-    ctx.strokeStyle = "#c8f135";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    if (keys.thrust && state === PLAY) {
+    if (invuln <= 0 || (invuln % 6 < 3)) {
+      ctx.save();
+      ctx.translate(ship.x, ship.y);
+      ctx.rotate(ship.a);
       ctx.beginPath();
-      ctx.moveTo(-10, 0);
-      ctx.lineTo(-18, 4);
-      ctx.lineTo(-14, 0);
-      ctx.lineTo(-18, -4);
+      ctx.moveTo(14, 0);
+      ctx.lineTo(-10, 9);
+      ctx.lineTo(-6, 0);
+      ctx.lineTo(-10, -9);
       ctx.closePath();
-      ctx.strokeStyle = "#f08050";
+      ctx.strokeStyle = "#c8f135";
+      ctx.lineWidth = 2;
       ctx.stroke();
+      if (keys.thrust && state === PLAY) {
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(-18, 4);
+        ctx.lineTo(-14, 0);
+        ctx.lineTo(-18, -4);
+        ctx.closePath();
+        ctx.strokeStyle = "#f08050";
+        ctx.stroke();
+      }
+      ctx.restore();
     }
-    ctx.restore();
 
     ctx.fillStyle = "#f3efe4";
     for (var b = 0; b < bullets.length; b++) {
@@ -233,7 +260,16 @@
       ctx.fillText("ASTEROIDS", W / 2, H * 0.38 + 42);
       ctx.fillStyle = "#f3efe4";
       ctx.font = "14px sans-serif";
-      ctx.fillText("Tap to start · wrap-around space", W / 2, H * 0.38 + 74);
+      ctx.fillText("Clear waves of rocks", W / 2, H * 0.38 + 74);
+    } else if (state === BETWEEN) {
+      ctx.fillStyle = "rgba(5,7,12,0.75)";
+      ctx.fillRect(60, H * 0.38, W - 120, 100);
+      ctx.fillStyle = "#c8f135";
+      ctx.font = "700 26px sans-serif";
+      ctx.fillText("WAVE " + wave, W / 2, H * 0.38 + 48);
+      ctx.fillStyle = "#f3efe4";
+      ctx.font = "14px sans-serif";
+      ctx.fillText("More and faster rocks", W / 2, H * 0.38 + 78);
     } else if (state === OVER) {
       ctx.fillStyle = "rgba(5,7,12,0.84)";
       ctx.fillRect(60, H * 0.36, W - 120, 120);
@@ -241,8 +277,8 @@
       ctx.font = "700 26px sans-serif";
       ctx.fillText("GAME OVER", W / 2, H * 0.36 + 42);
       ctx.fillStyle = "#f3efe4";
-      ctx.font = "20px monospace";
-      ctx.fillText(String(score), W / 2, H * 0.36 + 74);
+      ctx.font = "18px monospace";
+      ctx.fillText("Wave " + wave + " · " + score, W / 2, H * 0.36 + 74);
       ctx.font = "13px sans-serif";
       ctx.fillText("Tap to retry", W / 2, H * 0.36 + 100);
     }
@@ -260,7 +296,7 @@
     function down(e) {
       e.preventDefault();
       keys[key] = true;
-      if (state !== PLAY) start();
+      if (state === READY || state === OVER) start();
     }
     function up(e) {
       e.preventDefault();
@@ -277,8 +313,8 @@
   bindHold("btn-thrust", "thrust");
 
   canvas.addEventListener("pointerdown", function () {
-    if (state !== PLAY) start();
-    else fire();
+    if (state === READY || state === OVER) start();
+    else if (state === PLAY) fire();
   });
   window.addEventListener("keydown", function (e) {
     if (e.code === "ArrowLeft" || e.code === "KeyA") keys.left = true;
@@ -287,7 +323,7 @@
     if (e.code === "Space") {
       e.preventDefault();
       keys.fire = true;
-      if (state !== PLAY) start();
+      if (state === READY || state === OVER) start();
       else fire();
     }
   });

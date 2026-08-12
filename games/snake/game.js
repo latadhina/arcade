@@ -21,13 +21,16 @@
   canvas.height = H;
   var ctx = canvas.getContext("2d", { alpha: false });
 
-  var READY = 0, PLAY = 1, DEAD = 2;
+  var READY = 0, PLAY = 1, DEAD = 2, BETWEEN = 3;
   var state = READY;
   var snake = [];
   var dir = { x: 1, y: 0 };
   var pending = { x: 1, y: 0 };
   var food = { x: 0, y: 0 };
   var score = 0;
+  var round = 1;
+  var foodsThisRound = 0;
+  var FOODS_PER_ROUND = 5;
   var best = 0;
   try { best = Number(localStorage.getItem("snake_best_v2") || 0); } catch (e) {}
   var tick = 0;
@@ -35,6 +38,8 @@
   var last = 0;
   var touchStart = null;
   var pulse = 0;
+  var betweenTimer = 0;
+  var hazards = []; // blocked cells in later rounds
 
   function reset() {
     state = READY;
@@ -48,9 +53,36 @@
     dir = { x: 1, y: 0 };
     pending = { x: 1, y: 0 };
     score = 0;
+    round = 1;
+    foodsThisRound = 0;
+    hazards = [];
     tick = 0;
     stepTime = 0.24;
     placeFood();
+  }
+
+  function buildHazards() {
+    hazards = [];
+    if (round < 2) return;
+    var count = Math.min(12, (round - 1) * 3);
+    var i = 0, guard = 0;
+    while (i < count && guard < 200) {
+      guard++;
+      var x = 2 + ((Math.random() * (COLS - 4)) | 0);
+      var y = 2 + ((Math.random() * (ROWS - 4)) | 0);
+      if (onSnake(x, y)) continue;
+      if (Math.abs(x - snake[0].x) + Math.abs(y - snake[0].y) < 4) continue;
+      var dup = false;
+      for (var h = 0; h < hazards.length; h++) if (hazards[h].x === x && hazards[h].y === y) dup = true;
+      if (dup) continue;
+      hazards.push({ x: x, y: y });
+      i++;
+    }
+  }
+
+  function isHazard(x, y) {
+    for (var i = 0; i < hazards.length; i++) if (hazards[i].x === x && hazards[i].y === y) return true;
+    return false;
   }
 
   function onSnake(x, y) {
@@ -65,7 +97,7 @@
     var x, y;
     for (x = 0; x < COLS; x++) {
       for (y = 0; y < ROWS; y++) {
-        if (!onSnake(x, y)) free.push({ x: x, y: y });
+        if (!onSnake(x, y) && !isHazard(x, y)) free.push({ x: x, y: y });
       }
     }
     food = free.length ? free[(Math.random() * free.length) | 0] : { x: -1, y: -1 };
@@ -87,12 +119,23 @@
     if (window.LataPromo) window.LataPromo.onGameOver();
   }
 
+  function nextRound() {
+    round++;
+    foodsThisRound = 0;
+    score += 50 * (round - 1);
+    stepTime = Math.max(0.10, 0.24 - (round - 1) * 0.018);
+    buildHazards();
+    placeFood();
+    betweenTimer = 1.3;
+    state = BETWEEN;
+  }
+
   function step() {
     dir = pending;
     var head = snake[0];
     var next = { x: head.x + dir.x, y: head.y + dir.y };
 
-    if (next.x < 0 || next.x >= COLS || next.y < 0 || next.y >= ROWS) {
+    if (next.x < 0 || next.x >= COLS || next.y < 0 || next.y >= ROWS || isHazard(next.x, next.y)) {
       die();
       return;
     }
@@ -109,10 +152,10 @@
 
     snake.unshift(next);
     if (growing) {
-      score++;
-      // Gradual speed-up: tiny step, soft floor — never a sudden jump
-      stepTime = Math.max(0.11, 0.24 - score * 0.0012);
-      placeFood();
+      score += 10 * round;
+      foodsThisRound++;
+      if (foodsThisRound >= FOODS_PER_ROUND) nextRound();
+      else placeFood();
     } else {
       snake.pop();
     }
@@ -309,6 +352,8 @@
     ctx.font = "600 13px monospace";
     ctx.textAlign = "left";
     ctx.fillText("SCORE  " + score, 42, 68);
+    ctx.textAlign = "center";
+    ctx.fillText("ROUND " + round, W / 2, 68);
     ctx.textAlign = "right";
     ctx.fillText("BEST  " + best, W - 42, 68);
 
@@ -319,6 +364,12 @@
     ctx.stroke();
 
     drawFood();
+    // hazards
+    for (var hi = 0; hi < hazards.length; hi++) {
+      var hp = cellCenter(hazards[hi]);
+      ctx.fillStyle = LCD;
+      ctx.fillRect(hp.x - 5, hp.y - 5, 10, 10);
+    }
     drawSnake();
 
     ctx.textAlign = "center";
@@ -330,7 +381,16 @@
       ctx.font = "700 34px sans-serif";
       ctx.fillText("SNAKE", W / 2, lcdY + lcdH * 0.32 + 48);
       ctx.font = "14px sans-serif";
-      ctx.fillText("Swipe or use arrow keys", W / 2, lcdY + lcdH * 0.32 + 78);
+      ctx.fillText("5 foods · next round gets hazards", W / 2, lcdY + lcdH * 0.32 + 78);
+    } else if (state === BETWEEN) {
+      ctx.fillStyle = "rgba(197,214,160,0.8)";
+      roundRect(lcdX + 20, lcdY + lcdH * 0.32, lcdW - 40, 110, 10);
+      ctx.fill();
+      ctx.fillStyle = LCD;
+      ctx.font = "700 28px sans-serif";
+      ctx.fillText("ROUND " + round, W / 2, lcdY + lcdH * 0.32 + 48);
+      ctx.font = "14px sans-serif";
+      ctx.fillText("Faster · more obstacles", W / 2, lcdY + lcdH * 0.32 + 78);
     } else if (state === DEAD) {
       ctx.fillStyle = "rgba(197,214,160,0.8)";
       roundRect(lcdX + 20, lcdY + lcdH * 0.30, lcdW - 40, 120, 10);
@@ -338,8 +398,8 @@
       ctx.fillStyle = LCD;
       ctx.font = "700 28px sans-serif";
       ctx.fillText("GAME OVER", W / 2, lcdY + lcdH * 0.30 + 42);
-      ctx.font = "22px monospace";
-      ctx.fillText(String(score), W / 2, lcdY + lcdH * 0.30 + 74);
+      ctx.font = "16px monospace";
+      ctx.fillText("Round " + round + " · " + score, W / 2, lcdY + lcdH * 0.30 + 74);
       ctx.font = "13px sans-serif";
       ctx.fillText("Tap to retry", W / 2, lcdY + lcdH * 0.30 + 100);
     }
@@ -364,7 +424,10 @@
     var dt = (now - last) / 1000;
     if (dt > 0.05) dt = 0.05;
     last = now;
-    if (state === PLAY) {
+    if (state === BETWEEN) {
+      betweenTimer -= dt;
+      if (betweenTimer <= 0) state = PLAY;
+    } else if (state === PLAY) {
       tick += dt;
       while (tick >= stepTime) {
         tick -= stepTime;
