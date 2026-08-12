@@ -5,6 +5,7 @@
   var BASE_GAP = 110;
   var PIPE_SPACING = 160, PIPE_W = 48;
   var BIRD_X = 90, BIRD_R = 10;
+  var SCORE_PER_LEVEL = 20;
 
   var canvas = document.getElementById("c");
   canvas.width = W;
@@ -21,8 +22,12 @@
   var groundScroll = 0;
   var last = 0, acc = 0, STEP = 1 / 30;
 
+  // level-up celebration particles (not a game pause)
+  var fx = []; // {x,y,vx,vy,life,max,color,size}
+  var banner = null; // {text, t, max, x, y}
+
   function levelFromScore(s) {
-    return 1 + ((s / 5) | 0);
+    return 1 + ((s / SCORE_PER_LEVEL) | 0);
   }
 
   function pipeSpeed() {
@@ -33,6 +38,46 @@
     return Math.max(82, BASE_GAP - (level - 1) * 4);
   }
 
+  function celebrate(newLevel) {
+    banner = {
+      text: "LEVEL " + newLevel,
+      t: 0,
+      max: 0.85,
+      x: W / 2,
+      y: 36
+    };
+    var colors = ["#f0c040", "#ff6b4a", "#c8f135", "#5ad0e6", "#fff", "#f080a0"];
+    var i;
+    for (i = 0; i < 28; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = 40 + Math.random() * 120;
+      fx.push({
+        x: W / 2,
+        y: 40,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 30,
+        life: 0.55 + Math.random() * 0.35,
+        max: 0.9,
+        color: colors[(Math.random() * colors.length) | 0],
+        size: 2 + Math.random() * 3
+      });
+    }
+    // second burst a bit later feel — small ring
+    for (i = 0; i < 12; i++) {
+      var a2 = (i / 12) * Math.PI * 2;
+      fx.push({
+        x: W / 2,
+        y: 40,
+        vx: Math.cos(a2) * 90,
+        vy: Math.sin(a2) * 90,
+        life: 0.4,
+        max: 0.4,
+        color: "#fff",
+        size: 2
+      });
+    }
+  }
+
   function reset() {
     state = READY;
     birdY = H * 0.42;
@@ -41,6 +86,8 @@
     bobT = 0;
     score = 0;
     level = 1;
+    fx = [];
+    banner = null;
     pipes = [];
     var x = W + 40;
     for (var i = 0; i < 3; i++) pipes.push(newPipe(x + i * PIPE_SPACING));
@@ -66,6 +113,7 @@
   function die() {
     if (state === DEAD) return;
     state = DEAD;
+    banner = null;
     if (score > best) {
       best = score;
       try { localStorage.setItem("tappy_best", String(best)); } catch (e) {}
@@ -87,9 +135,26 @@
     if (e.code === "Enter" && state === DEAD) reset();
   });
 
+  function updateFx(dt) {
+    var i;
+    if (banner) {
+      banner.t += dt;
+      if (banner.t >= banner.max) banner = null;
+    }
+    for (i = fx.length - 1; i >= 0; i--) {
+      var p = fx[i];
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 180 * dt;
+      if (p.life <= 0) fx.splice(i, 1);
+    }
+  }
+
   function update(dt) {
     var speed = pipeSpeed();
     var gap = pipeGap();
+    updateFx(dt);
 
     if (state === READY) {
       bobT += dt;
@@ -120,7 +185,11 @@
       if (!p.scored && p.x < BIRD_X) {
         p.scored = true;
         score++;
-        level = levelFromScore(score);
+        var next = levelFromScore(score);
+        if (next > level) {
+          level = next;
+          celebrate(level);
+        }
       }
     }
     if (pipes.length && pipes[0].x < -PIPE_W) {
@@ -160,6 +229,41 @@
     ctx.fillText(t, x, y);
   }
 
+  function drawFx() {
+    var i;
+    // firework sparks
+    for (i = 0; i < fx.length; i++) {
+      var p = fx[i];
+      var a = Math.max(0, p.life / (p.max || 0.6));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // exploding level text
+    if (banner) {
+      var k = banner.t / banner.max;
+      var scale = 1 + k * 1.8;
+      var alpha = k < 0.25 ? k / 0.25 : Math.max(0, 1 - (k - 0.25) / 0.75);
+      ctx.save();
+      ctx.translate(banner.x, banner.y);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#fff";
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.font = "bold 16px sans-serif";
+      ctx.textAlign = "center";
+      ctx.strokeText(banner.text, 0, 0);
+      ctx.fillText(banner.text, 0, 0);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+  }
+
   function draw() {
     ctx.fillStyle = "#4ec0ca";
     ctx.fillRect(0, 0, W, GROUND);
@@ -191,6 +295,16 @@
     ctx.fill();
     ctx.restore();
 
+    // small persistent level — top left
+    if (state === PLAY || state === DEAD) {
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(8, 8, 62, 18);
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 11px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("level " + level, 14, 21);
+    }
+
     ctx.fillStyle = "#fff";
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 3;
@@ -203,9 +317,7 @@
       strokeText("Tap / Space to flap", W / 2, 232);
     } else if (state === PLAY) {
       ctx.font = "bold 36px sans-serif";
-      strokeText(String(score), W / 2, 52);
-      ctx.font = "bold 14px sans-serif";
-      strokeText("LEVEL " + level, W / 2, 74);
+      strokeText(String(score), W / 2, 56);
     } else {
       ctx.font = "bold 26px sans-serif";
       strokeText("GAME OVER", W / 2, 200);
@@ -213,6 +325,8 @@
       strokeText("Score " + score + " · Level " + level + " · Best " + best, W / 2, 232);
       strokeText("Tap / Space to retry", W / 2, 258);
     }
+
+    drawFx();
   }
 
   function loop(now) {
