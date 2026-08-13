@@ -11,6 +11,7 @@
 
   var COLORS = ["#e35d5b", "#f08050", "#f0c040", "#5ac46a", "#5ad0e6", "#c07aef"];
   var brickW = 46, brickH = 16, gap = 4;
+  var MARGIN = 14;
   var bricks = [];
   var paddle = { w: 72, h: 12, x: W / 2 - 36, y: H - 48 };
   var ball = { x: W / 2, y: H - 70, vx: 0, vy: 0, r: 7 };
@@ -94,8 +95,10 @@
   function layout() {
     var rows = Math.min(8, 4 + level);
     var cols = Math.min(10, 7 + Math.floor((level - 1) / 2));
-    brickW = Math.floor((W - 40 - (cols - 1) * gap) / cols);
-    var offsetX = (W - (cols * brickW + (cols - 1) * gap)) / 2;
+    // fill almost to the color frame — no side gutters for the ball to sneak behind
+    var inner = W - MARGIN * 2 - 4;
+    brickW = Math.floor((inner - (cols - 1) * gap) / cols);
+    var offsetX = MARGIN + 2 + Math.floor((inner - (cols * brickW + (cols - 1) * gap)) / 2);
     var offsetY = 64;
     bricks = [];
     for (var r = 0; r < rows; r++) {
@@ -166,18 +169,21 @@
     if (state !== PLAY) return;
 
     paddle.x += (pointerX - paddle.x) * 0.4;
-    paddle.x = Math.max(8, Math.min(W - paddle.w - 8, paddle.x));
+    paddle.x = Math.max(MARGIN, Math.min(W - paddle.w - MARGIN, paddle.x));
 
     ball.x += ball.vx;
     ball.y += ball.vy;
 
-    if (ball.x < ball.r || ball.x > W - ball.r) {
+    var left = MARGIN + ball.r;
+    var right = W - MARGIN - ball.r;
+    var top = MARGIN + ball.r;
+    if (ball.x < left || ball.x > right) {
       ball.vx *= -1;
-      ball.x = Math.max(ball.r, Math.min(W - ball.r, ball.x));
+      ball.x = Math.max(left, Math.min(right, ball.x));
     }
-    if (ball.y < ball.r) {
+    if (ball.y < top) {
       ball.vy = Math.abs(ball.vy);
-      ball.y = ball.r;
+      ball.y = top;
     }
 
     if (
@@ -220,15 +226,23 @@
         var overlapB = b.y + b.h - (ball.y - ball.r);
         var minX = Math.min(overlapL, overlapR);
         var minY = Math.min(overlapT, overlapB);
-        if (minX < minY) ball.vx *= -1;
-        else ball.vy *= -1;
+        // push ball out so it can't tunnel along a column
+        if (minX < minY) {
+          ball.vx *= -1;
+          if (overlapL < overlapR) ball.x = b.x - ball.r - 0.1;
+          else ball.x = b.x + b.w + ball.r + 0.1;
+        } else {
+          ball.vy *= -1;
+          if (overlapT < overlapB) ball.y = b.y - ball.r - 0.1;
+          else ball.y = b.y + b.h + ball.r + 0.1;
+        }
         break;
       }
     }
 
-    var left = false;
-    for (i = 0; i < bricks.length; i++) if (bricks[i].alive) { left = true; break; }
-    if (!left) nextLevel();
+    var leftBricks = false;
+    for (i = 0; i < bricks.length; i++) if (bricks[i].alive) { leftBricks = true; break; }
+    if (!leftBricks) nextLevel();
 
     if (ball.y > H + 20) {
       lives -= 1;
@@ -243,6 +257,16 @@
   function draw() {
     ctx.fillStyle = "#0b1424";
     ctx.fillRect(0, 0, W, H);
+
+    // bright color frame — playfield edges
+    ctx.fillStyle = "#4fd0ff";
+    ctx.fillRect(0, 0, W, MARGIN);
+    ctx.fillRect(0, H - MARGIN, W, MARGIN);
+    ctx.fillRect(0, 0, MARGIN, H);
+    ctx.fillRect(W - MARGIN, 0, MARGIN, H);
+    ctx.strokeStyle = "#2a9fc4";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(MARGIN + 1, MARGIN + 1, W - MARGIN * 2 - 2, H - MARGIN * 2 - 2);
 
     if (state === PLAY || state === OVER) {
       ctx.fillStyle = "rgba(0,0,0,0.35)";

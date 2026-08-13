@@ -149,19 +149,19 @@
     if (state !== PLAY) return;
 
     playerY += (pointerY - playerY) * 0.35;
-    playerY = Math.max(0, Math.min(H - paddleH, playerY));
+    playerY = Math.max(6, Math.min(H - paddleH - 6, playerY));
 
     var target = ball.y - paddleH / 2;
     target += (Math.random() - 0.5) * (26 - round * 3);
     cpuY += (target - cpuY) * cpuSkill;
-    cpuY = Math.max(0, Math.min(H - paddleH, cpuY));
+    cpuY = Math.max(6, Math.min(H - paddleH - 6, cpuY));
 
     ball.x += ball.vx;
     ball.y += ball.vy;
 
-    if (ball.y < ball.r || ball.y > H - ball.r) {
+    if (ball.y < ball.r + 6 || ball.y > H - ball.r - 6) {
       ball.vy *= -1;
-      ball.y = Math.max(ball.r, Math.min(H - ball.r, ball.y));
+      ball.y = Math.max(ball.r + 6, Math.min(H - ball.r - 6, ball.y));
     }
 
     if (
@@ -205,11 +205,22 @@
     ctx.fillStyle = "#0e1014";
     ctx.fillRect(0, 0, W, H);
 
+    // bright color frame — bounce edges
+    var m = 4;
+    ctx.fillStyle = "#4fd0ff";
+    ctx.fillRect(0, 0, W, m);
+    ctx.fillRect(0, H - m, W, m);
+    ctx.fillRect(0, 0, m, H);
+    ctx.fillRect(W - m, 0, m, H);
+    ctx.strokeStyle = "#2a9fc4";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(m + 1, m + 1, W - (m + 1) * 2, H - (m + 1) * 2);
+
     ctx.strokeStyle = "rgba(200,241,53,0.25)";
     ctx.setLineDash([8, 10]);
     ctx.beginPath();
-    ctx.moveTo(W / 2, 10);
-    ctx.lineTo(W / 2, H - 10);
+    ctx.moveTo(W / 2, 12);
+    ctx.lineTo(W / 2, H - 12);
     ctx.stroke();
     ctx.setLineDash([]);
 
