@@ -604,6 +604,52 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* Jetty (Godot HQ) thumb */
+.jetty-art {
+  background: linear-gradient(180deg, #6eb6e8 0%, #b7dcf5 55%, #8fbf6a 100%) !important;
+}
+.jetty-hero {
+  position: absolute;
+  left: 42%;
+  top: 40%;
+  width: 28px;
+  height: 22px;
+  background: #2a3340;
+  border-radius: 6px 10px 6px 6px;
+  box-shadow: 2px 0 0 #f0c14a;
+  animation: jettybob 1.2s ease-in-out infinite;
+}
+.jetty-rock {
+  position: absolute;
+  left: 62%;
+  width: 34px;
+  background: #6b5a4a;
+  border-radius: 4px;
+}
+.jetty-rock.top { top: 0; height: 34%; }
+.jetty-rock.bot { bottom: 0; height: 38%; }
+@keyframes jettybob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Invaders HQ (Godot) thumb */
+.invaders-hq-art {
+  background: radial-gradient(ellipse at 50% 20%, #12182a, #03050a 70%) !important;
+}
+.invaders-hq-art .inv {
+  background: #7dffb3;
+}
+.hq-ship {
+  position: absolute;
+  left: 44%;
+  bottom: 14%;
+  width: 22px;
+  height: 14px;
+  background: #5ad0e6;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
 .foot {
   display: flex;
   justify-content: space-between;
