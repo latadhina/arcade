@@ -1,7 +1,7 @@
 /* Shared arcade promo — after every N finished games */
 (function (global) {
   var KEY = "lata_arcade_games_finished";
-  var EVERY = 5;
+  var EVERY = 3;
   var DURATION_MS = 3000;
 
   function products() {
