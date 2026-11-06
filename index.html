@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=14" />
 </head>
 <body>
   <div class="bg" aria-hidden="true"></div>
@@ -22,10 +22,29 @@
       </div>
 
       <section id="games" class="games" aria-label="Games">
-        <h2 class="section-label">Now playing</h2>
+        <div class="games-heading">
+          <div>
+            <p class="eyebrow">THE GAME ROOM</p>
+            <h2 class="section-label">Pick your next game</h2>
+          </div>
+          <span class="game-count" id="game-count" aria-live="polite">9 games</span>
+        </div>
+        <div class="game-tools">
+          <label class="search-box">
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <span class="visually-hidden">Search games</span>
+            <input id="game-search" type="search" placeholder="Find a game…" autocomplete="off" />
+            <kbd>/</kbd>
+          </label>
+          <div class="filters" role="group" aria-label="Filter games">
+            <button class="filter is-active" type="button" data-filter="all" aria-pressed="true">All games</button>
+            <button class="filter" type="button" data-filter="arcade" aria-pressed="false">Arcade</button>
+            <button class="filter" type="button" data-filter="puzzle" aria-pressed="false">Puzzle</button>
+          </div>
+        </div>
         <ul class="grid">
           <li>
-            <a class="game" href="games/flappy/">
+            <a class="game" data-category="arcade" href="games/flappy/">
               <span class="game-art" aria-hidden="true">
                 <span class="bird"></span>
                 <span class="pipe pipe-top"></span>
@@ -39,7 +58,7 @@
             </a>
           </li>
           <li>
-            <a class="game" href="games/snake/">
+            <a class="game" data-category="arcade puzzle" href="games/snake/">
               <span class="game-art snake-art" aria-hidden="true">
                 <span class="snake-seg s1"></span>
                 <span class="snake-seg s2"></span>
@@ -55,7 +74,7 @@
             </a>
           </li>
           <li>
-            <a class="game" href="games/tetris/">
+            <a class="game" data-category="puzzle" href="games/tetris/">
               <span class="game-art tetris-art" aria-hidden="true">
                 <span class="tb t1"></span>
                 <span class="tb t2"></span>
@@ -72,7 +91,7 @@
             </a>
           </li>
           <li>
-            <a class="game" href="games/pong/">
+            <a class="game" data-category="arcade" href="games/pong/">
               <span class="game-art pong-art" aria-hidden="true">
                 <span class="pong-paddle left"></span>
                 <span class="pong-paddle right"></span>
@@ -86,7 +105,7 @@
             </a>
           </li>
           <li>
-            <a class="game" href="games/breakout/">
+            <a class="game" data-category="arcade" href="games/breakout/">
               <span class="game-art breakout-art" aria-hidden="true">
                 <span class="brk b1"></span>
                 <span class="brk b2"></span>
@@ -105,7 +124,7 @@
             </a>
           </li>
           <li>
-            <a class="game" href="games/invaders/">
+            <a class="game" data-category="arcade" href="games/invaders/">
               <span class="game-art invaders-art" aria-hidden="true">
                 <span class="inv i1"></span>
                 <span class="inv i2"></span>
@@ -123,7 +142,7 @@
             </a>
           </li>
           <li>
-            <a class="game" href="games/asteroids/">
+            <a class="game" data-category="arcade" href="games/asteroids/">
               <span class="game-art asteroids-art" aria-hidden="true">
                 <span class="rock r1"></span>
                 <span class="rock r2"></span>
@@ -138,7 +157,7 @@
             </a>
           </li>
           <li>
-            <a class="game" href="games/jetty/">
+            <a class="game" data-category="arcade" href="games/jetty/">
               <span class="game-art jetty-art" aria-hidden="true">
                 <span class="jetty-hero"></span>
                 <span class="jetty-rock top"></span>
@@ -152,7 +171,7 @@
             </a>
           </li>
           <li>
-            <a class="game" href="games/invaders-hq/">
+            <a class="game" data-category="arcade" href="games/invaders-hq/">
               <span class="game-art invaders-hq-art" aria-hidden="true">
                 <span class="inv i1"></span>
                 <span class="inv i2"></span>
@@ -168,6 +187,7 @@
             </a>
           </li>
         </ul>
+        <p class="empty-state" id="empty-state" hidden>No games match that search. Try another name.</p>
       </section>
     </div>
 
@@ -198,5 +218,6 @@
 
   <script src="products.js?v=13"></script>
   <script src="slideshow.js?v=13"></script>
+  <script src="arcade.js?v=1"></script>
 </body>
 </html>
