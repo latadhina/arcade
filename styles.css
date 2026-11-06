@@ -414,8 +414,8 @@ body {
 .grid {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 144px), 1fr));
+  gap: 0.7rem;
 }
 
 .game {
@@ -442,7 +442,7 @@ body {
 
 .game-art {
   position: relative;
-  height: clamp(112px, 12vw, 148px);
+  height: clamp(76px, 8vw, 94px);
   background: linear-gradient(180deg, #6ec8de 0%, #8fd4e8 60%, #7cbc4a 60%, #6aaa3c 100%);
   border-bottom: 3px solid var(--ink);
   overflow: hidden;
@@ -560,25 +560,47 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 0.75rem 0.9rem 0.9rem;
+  padding: 0.55rem 0.65rem 0.65rem;
 }
 
 .game-name {
   font-family: "Bungee", sans-serif;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
 }
 
 .game-desc {
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   color: var(--muted);
 }
 
 .game-go {
   margin-top: 0.35rem;
   font-family: "Bungee", sans-serif;
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   color: var(--deep);
 }
+
+.mines-art {
+  display: grid;
+  grid-template-columns: repeat(3, 25px);
+  grid-template-rows: repeat(3, 25px);
+  place-content: center;
+  gap: 3px;
+  background: linear-gradient(145deg, #273a4d, #111c29) !important;
+}
+
+.mine-cell {
+  display: grid;
+  place-items: center;
+  color: #31526a;
+  background: #dce4d9;
+  border: 2px solid #f4f1e6;
+  font: 700 0.8rem "IBM Plex Sans", sans-serif;
+}
+
+.mine-cell.m1, .mine-cell.m5 { color: #d84b43; }
+.mine-cell.m2 { color: #2869ad; }
+.mine-cell.m3 { color: #202b32; background: #c8f135; }
 
 /* Pong thumb */
 .pong-art {

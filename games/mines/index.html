@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#101820" />
+  <title>Minefield | A LATA ARCADE</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; padding: 1rem; display: grid; place-items: center; color: #f3efe4; background: radial-gradient(ellipse at top, #20394b, #101820 65%); font: 16px system-ui, sans-serif; }
+    main { width: min(100%, 430px); }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    a { color: #c8f135; text-decoration: none; }
+    h1 { margin: 0; font-size: 1.6rem; letter-spacing: .04em; }
+    .panel { padding: 1rem; border: 1px solid #496171; border-radius: 14px; background: #192832; box-shadow: 0 16px 40px #0005; }
+    .stats { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .8rem; color: #d2dce0; font-size: .9rem; }
+    .stats strong { color: #c8f135; font-variant-numeric: tabular-nums; }
+    .actions { display: flex; gap: .5rem; margin-bottom: .8rem; }
+    .actions button { flex: 1; min-height: 42px; border: 1px solid #67808e; border-radius: 8px; color: #f3efe4; background: #263b48; font: inherit; cursor: pointer; }
+    .actions button[aria-pressed="true"] { color: #14202a; background: #c8f135; border-color: #c8f135; }
+    #board { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 3px; padding: 4px; border-radius: 8px; background: #0b1319; touch-action: manipulation; }
+    .cell { aspect-ratio: 1; min-width: 0; padding: 0; border: 0; border-radius: 3px; color: #18232a; background: #bdc9c8; font: 700 clamp(.72rem, 5vw, 1rem) system-ui, sans-serif; cursor: pointer; }
+    .cell:hover:not(.open) { background: #e4e8d9; }
+    .cell.open { background: #edf0e4; cursor: default; }
+    .cell.flag { color: #a73030; }
+    .cell.mine { background: #e36d55; }
+    .n1 { color: #2768b2; } .n2 { color: #378342; } .n3 { color: #c53e32; } .n4 { color: #563a9e; } .n5 { color: #914724; } .n6 { color: #258a91; }
+    #status { min-height: 1.4em; margin: .8rem 0 0; text-align: center; color: #d2dce0; }
+    @media (max-width: 360px) { body { padding: .6rem; } .panel { padding: .65rem; } #board { gap: 2px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="top"><a href="../../">← Arcade</a><h1>Minefield</h1><span aria-hidden="true">✹</span></header>
+    <section class="panel" aria-label="Minefield game">
+      <div class="stats"><span>Mines: <strong id="mines-left">10</strong></span><span id="timer">00:00</span></div>
+      <div class="actions"><button id="mode" type="button" aria-pressed="false">🚩 Flag mode: off</button><button id="restart" type="button">New game</button></div>
+      <div id="board" role="grid" aria-label="10 by 10 minefield"></div>
+      <p id="status" aria-live="polite">Open a square to begin. Your first pick is safe.</p>
+    </section>
+  </main>
+  <script src="game.js?v=1"></script>
+</body>
+</html>
