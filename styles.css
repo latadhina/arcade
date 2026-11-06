@@ -39,7 +39,7 @@ body {
 .hero {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(240px, 340px);
+  grid-template-columns: minmax(0, 1fr);
   column-gap: clamp(1.5rem, 4vw, 3rem);
   row-gap: 1.75rem;
   align-items: start;
@@ -98,12 +98,18 @@ body {
   opacity: 0;
   transform: translateY(20px);
   animation: rise 0.8s 0.35s ease forwards;
-  position: sticky;
-  top: 1.25rem;
+  position: relative;
   z-index: 0;
   width: 100%;
-  max-width: 340px;
-  justify-self: end;
+  max-width: 270px;
+  justify-self: center;
+}
+
+.ad-slot {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  padding: 0.15rem 0;
 }
 
 .ad-bezel {
@@ -285,10 +291,9 @@ body {
     text-shadow: 3px 3px 0 var(--lime);
   }
   .ad-screen {
-    justify-self: stretch;
-    max-width: none;
+    justify-self: center;
+    max-width: 270px;
     position: static;
-    order: -1;
   }
 }
 
